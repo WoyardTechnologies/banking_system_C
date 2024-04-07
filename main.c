@@ -65,12 +65,6 @@ bool REQUIRE_CONFIRMATION_ON_EDIT = true;
 int global_view_mode = FULL_VIEW;
 uint32_t number_of_accounts = 0;
 
-
-void clear_buffer(){
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}
-
 void print_help(){
     printf("Available commands:\n");
     printf("list <view_mode> - list all accounts 0-full_view 1-short_view\n");
@@ -86,7 +80,6 @@ void print_help(){
     printf("reset_file - reset file to initial state\n");
     printf("collect_interest <account_number> - collect interest on loan\n");
     printf("help - display this message\n");
-    clear_buffer();
 }
 
 void print_search_help(){
