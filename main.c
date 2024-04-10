@@ -12,7 +12,7 @@
 #define LENGTH_OF_NATIONAL_ID 11
 #define LENGTH_OF_BALANCE 10
 #define LENGTH_OF_LOAN_BALANCE 10
-#define LENGTH_OF_INTEREST_RATE 5
+#define LENGTH_OF_INTEREST_RATE 7
 
 #define FULL_VIEW 1
 #define SHORT_VIEW 2
@@ -36,7 +36,8 @@ const char* COMMANDS[] = {
         "quit",
         "reset_file",
         "collect_interest",
-        "help"
+        "help",
+        "paste"
 };
 
 typedef struct Account{
@@ -174,7 +175,7 @@ int verify_account_validity(acc_t account){
 
 int get_confirmation(){
     char confirmation;
-    printf("Are you sure you want to make changes to the account? (y/n)\n");
+    printf("Are you sure you want to make changes to the record file? (y/n)\n");
     scanf("%c", &confirmation);
     while (getchar() != '\n');
     if (confirmation == 'y')
@@ -194,6 +195,24 @@ int reset_file() {
     }
     fwrite(&NULL_ACCOUNT, sizeof(acc_t), 1, file);
     fwrite(&ROOT_BANK_ACCOUNT, sizeof(acc_t), 1, file);
+    fclose(file);
+    return 0;
+}
+
+int verify_file_integrity(){
+    FILE *file = fopen(RECORD_FILE, "r");
+    if (file == NULL){
+        printf("Error opening file\n");
+        return 1;
+    }
+    acc_t account;
+    while (fread(&account, sizeof(acc_t), 1, file)){
+        if (verify_account_validity(account) != 0){
+            printf("Error verifying file integrity - reset_file or manual trimming of data advised\n");
+            fclose(file);
+            return 1;
+        }
+    }
     fclose(file);
     return 0;
 }
@@ -229,9 +248,11 @@ acc_t get_last_account(){
     acc_t last_account = NULL_ACCOUNT;
     if(fread(&last_account, sizeof(acc_t), 1, file) == 0){
         printf("Error reading last account\n");
-
         fclose(file);
         return last_account;
+    }
+    if (number_of_accounts != 0 && last_account.account_number != number_of_accounts){
+        printf("Error reading last account - acc numbers not in sync\n");
     }
     fclose(file);
     return last_account;
@@ -255,11 +276,26 @@ int add_account(acc_t new_account) {
     return 0;
 }
 
-int convert_newlines_to_whitespace(char* string){
-    for (int i = 0; i < strlen(string); i++){
+int convert_newlines_to_whitespace(char* string, int length){
+    for (int i = 0; i < length; i++){
         if (string[i] == '\n')
             string[i] = ' ';
+        else if (string[i] == '\0')
+            return 1;
     }
+    return 0;
+}
+
+int get_and_clean_input(char* input_buffer, int buffer_size) {
+    fgets(input_buffer, buffer_size, stdin);
+    int len = strlen(input_buffer);
+    if (len == 0){
+        return 1;
+    } else if (len >= buffer_size - 1) {
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
+    }
+    convert_newlines_to_whitespace(input_buffer, len);
     return 0;
 }
 
@@ -267,27 +303,25 @@ int add_account_from_input(){
     acc_t new_account;
     char temp_balance[LENGTH_OF_BALANCE], temp_loan_balance[LENGTH_OF_LOAN_BALANCE], temp_interest_rate[LENGTH_OF_INTEREST_RATE];
     printf("Enter name: ");
-    fgets(new_account.name, LENGTH_OF_NAME, stdin);
-    convert_newlines_to_whitespace(new_account.name);
+    get_and_clean_input(new_account.name, LENGTH_OF_NAME);
     printf("Enter surname: ");
-    fgets(new_account.surname, LENGTH_OF_SURNAME, stdin);
-    convert_newlines_to_whitespace(new_account.surname);
+    get_and_clean_input(new_account.surname, LENGTH_OF_SURNAME);
     printf("Enter address: ");
-    fgets(new_account.address, LENGTH_OF_ADDRESS, stdin);
-    convert_newlines_to_whitespace(new_account.address);
+    get_and_clean_input(new_account.address, LENGTH_OF_ADDRESS);
     printf("Enter national ID: ");
-    fgets(new_account.national_id, LENGTH_OF_NATIONAL_ID, stdin);
-    convert_newlines_to_whitespace(new_account.national_id);
+    get_and_clean_input(new_account.national_id, LENGTH_OF_NATIONAL_ID);
     printf("Enter current balance: ");
-    fgets(temp_balance, LENGTH_OF_BALANCE, stdin);
+    get_and_clean_input(temp_balance, LENGTH_OF_BALANCE);
     new_account.curr_balance = strtol(temp_balance, NULL, 10);
     printf("Enter loan balance: ");
-    fgets(temp_loan_balance, LENGTH_OF_LOAN_BALANCE, stdin);
+    get_and_clean_input(temp_loan_balance, LENGTH_OF_LOAN_BALANCE);
     new_account.loan_balance = strtol(temp_loan_balance, NULL, 10);
-    printf("Enter rate: ");
-    fgets(temp_interest_rate, LENGTH_OF_INTEREST_RATE, stdin);
+    printf("Enter interest rate: ");
+    get_and_clean_input(temp_interest_rate, LENGTH_OF_INTEREST_RATE);
     new_account.interest_rate = strtod(temp_interest_rate, NULL);
-
+    printf("Account to be added:\n");
+    print_table_header(global_view_mode);
+    print_account_as_table(new_account, global_view_mode);
     if (get_confirmation() == false || add_account(new_account)==1){
         return 1;
     }
@@ -544,7 +578,7 @@ int search_for_account(uint32_t search_option, char* prev_search_string){
         case 0:
             if (no_same_line_arg_passed) {
                 printf("enter account number\n");
-                fgets(search_string, MAX_COMMAND_LENGTH, stdin);
+                get_and_clean_input(search_string, MAX_COMMAND_LENGTH);
             }
             account = get_account(strtol(search_string, NULL, 10));
             if (account.account_number == NULL_ACCOUNT.account_number){
@@ -557,7 +591,7 @@ int search_for_account(uint32_t search_option, char* prev_search_string){
         case 1:
             if(no_same_line_arg_passed){
                 printf("enter name\n");
-                fgets(account.name, LENGTH_OF_NAME, stdin);
+                get_and_clean_input(account.name, LENGTH_OF_NAME);
             } else {
                 strncpy(account.name, search_string, LENGTH_OF_NAME);
             }
@@ -565,7 +599,7 @@ int search_for_account(uint32_t search_option, char* prev_search_string){
         case 2:
             if(no_same_line_arg_passed){
                 printf("enter surname\n");
-                fgets(account.surname, LENGTH_OF_SURNAME, stdin);
+                get_and_clean_input(account.surname, LENGTH_OF_SURNAME);
             } else {
                 strncpy(account.surname, search_string, LENGTH_OF_SURNAME);
             }
@@ -573,7 +607,7 @@ int search_for_account(uint32_t search_option, char* prev_search_string){
         case 3:
             if(no_same_line_arg_passed){
                 printf("enter address\n");
-                fgets(account.address, LENGTH_OF_ADDRESS, stdin);
+                get_and_clean_input(account.address, LENGTH_OF_ADDRESS);
             } else {
                 strncpy(account.address, search_string, LENGTH_OF_ADDRESS);
             }
@@ -581,7 +615,7 @@ int search_for_account(uint32_t search_option, char* prev_search_string){
         case 4:
             if(no_same_line_arg_passed){
                 printf("enter national ID\n");
-                fgets(account.national_id, LENGTH_OF_NATIONAL_ID, stdin);
+                get_and_clean_input(account.national_id, LENGTH_OF_NATIONAL_ID);
             } else {
                 strncpy(account.national_id, search_string, LENGTH_OF_NATIONAL_ID);
             }
@@ -611,7 +645,7 @@ int read_command() {
     uint32_t arg3;
     char* endptr;
     printf("BankOS:root> ");
-    fgets(command, MAX_COMMAND_LENGTH, stdin);
+    get_and_clean_input(command, MAX_COMMAND_LENGTH);
     for (cmd_id = 0; cmd_id < N_OF_COMMANDS; cmd_id++) {
         if (check_string_for_command(command, COMMANDS[cmd_id]))
             break;
@@ -675,6 +709,11 @@ int read_command() {
         case 12: // help
             print_help();
             break;
+        case 13: // paste
+            arg1 = strtol(command+strlen(COMMANDS[cmd_id]), &endptr, 10);
+            arg3 = strtol(endptr, &endptr, 10);
+            paste_account_at_number(arg1, get_account(arg3));
+            break;
         default:
             printf("Command not recognized\n");
             break;
@@ -684,18 +723,11 @@ int read_command() {
 
 int main() {
     //reset_file();
+    print_welcome_screen();
+    verify_file_integrity();
     acc_t last_account = get_last_account();
     number_of_accounts = last_account.account_number;
-    REQUIRE_CONFIRMATION_ON_EDIT = false;
-    //acc_t temp0 = {0, "Jan", "Kowalski", "ul. Polna 1 00-001 Warszawa", "04272000214", 1000, 0, 0.05};
-    //add_account(temp0);
-    acc_t temp = ROOT_BANK_ACCOUNT;
-    temp.curr_balance = 696969696;
-    //paste_account_at_number(1, temp);
-    //add_account_from_input();
     REQUIRE_CONFIRMATION_ON_EDIT = true;
-    print_welcome_screen();
-    //read_all_records(FULL_VIEW);
     while(1) {
         if(read_command()==1){
             break;
