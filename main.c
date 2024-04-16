@@ -21,7 +21,7 @@
 #define WELCOME_SCREEN_FILE "welcome_screen.txt"
 
 #define MAX_COMMAND_LENGTH 64
-#define N_OF_COMMANDS 13
+#define N_OF_COMMANDS 14
 
 const char* COMMANDS[] = {
         "list",
@@ -61,6 +61,19 @@ typedef struct Account{
 
 const acc_t NULL_ACCOUNT = {0, "", "", "", "", 0, 0, 0};
 const acc_t ROOT_BANK_ACCOUNT = {1, "Bank", "Bank", "ul. Bankowa 1 00-001 Warszawa", "00000000000", INT32_MAX/2, 0, 0};
+
+const acc_t PRESET_ACCOUNTS[] = {
+        1, "Jan", "Kowalski", "ul. Kowalska 1 00-001 Warszawa", "12345678901", 1000, 0, 0.1,
+        2, "Anna", "Nowak", "ul. Nowa 1 00-001 Warszawa", "12345678902", 2000, 0, 0.2,
+        3, "Piotr", "Kowalczyk", "ul. Kolczykowa 1 00-001 Warszawa", "12345678903", 3000, 0, 0.3,
+        4, "Agnieszka", "Kowalska", "ul. Kowalska 2 00-001 Warszawa", "12345678904", 4000, 0, 0.4,
+        5, "Janusz", "Nowak", "ul. Nowa 2 00-001 Warszawa", "12345678905", 5000, 0, 0.5,
+        6, "Krzysztof", "Kowalczyk", "ul. Kolczowa 2 00-001 Warszawa", "12345678906", 6000, 0, 0.6,
+        7, "Alicja", "Kowalska", "ul. Kowalska 3 00-001 Warszawa", "12345678907", 7000, 0, 0.7,
+        8, "Jan", "Nowak", "ul. Nowa 3 00-001 Warszawa", "12345678908", 8000, 0, 0.8,
+        9, "Anna", "Kowalczyk", "ul. Kowalkowa 3 00-001 Warszawa", "12345678909", 9000, 0, 0.9,
+        10, "Piotr", "Kowalski", "ul. Kowalska 4 00-001 Warszawa", "12345678910", 10000, 0, 0.1
+};
 
 bool REQUIRE_CONFIRMATION_ON_EDIT = true;
 int global_view_mode = FULL_VIEW;
@@ -161,6 +174,19 @@ int read_all_records(int view_mode){
     return 0;
 }
 
+int is_account_null(acc_t account) {
+    if (account.account_number == NULL_ACCOUNT.account_number &&
+        account.curr_balance == NULL_ACCOUNT.curr_balance &&
+        account.loan_balance == NULL_ACCOUNT.loan_balance &&
+        account.interest_rate == NULL_ACCOUNT.interest_rate &&
+        strncmp(account.name, NULL_ACCOUNT.name, LENGTH_OF_NAME) == 0 &&
+        strncmp(account.surname, NULL_ACCOUNT.surname, LENGTH_OF_SURNAME) == 0 &&
+        strncmp(account.address, NULL_ACCOUNT.address, LENGTH_OF_ADDRESS) == 0 &&
+        strncmp(account.national_id, NULL_ACCOUNT.national_id, LENGTH_OF_NATIONAL_ID) == 0)
+        return true;
+    return false;
+}
+
 int verify_account_validity(acc_t account){
     if (account.account_number == NULL_ACCOUNT.account_number)
         return 1;
@@ -196,6 +222,7 @@ int reset_file() {
     fwrite(&NULL_ACCOUNT, sizeof(acc_t), 1, file);
     fwrite(&ROOT_BANK_ACCOUNT, sizeof(acc_t), 1, file);
     fclose(file);
+    number_of_accounts = 1;
     return 0;
 }
 
@@ -207,7 +234,9 @@ int verify_file_integrity(){
     }
     acc_t account;
     while (fread(&account, sizeof(acc_t), 1, file)){
-        if (verify_account_validity(account) != 0){
+        if (verify_account_validity(account) != 0 && is_account_null(account)==false){
+            print_table_header(FULL_VIEW);
+            print_account_as_table(account, FULL_VIEW);
             printf("Error verifying file integrity - reset_file or manual trimming of data advised\n");
             fclose(file);
             return 1;
@@ -273,6 +302,14 @@ int add_account(acc_t new_account) {
     fwrite(&new_account, sizeof(acc_t), 1, file);
     number_of_accounts++;
     fclose(file);
+    return 0;
+}
+
+int populate_file_with_preset_accounts(){
+    for (int i = 0; i < sizeof(PRESET_ACCOUNTS)/sizeof(acc_t); i++){
+        if(add_account(PRESET_ACCOUNTS[i]) != 0)
+            return 1;
+    }
     return 0;
 }
 
@@ -701,6 +738,7 @@ int read_command() {
             return 1;
         case 10: // reset_file
             reset_file();
+            populate_file_with_preset_accounts();
             break;
         case 11: // collect_interest
             arg1 = strtol(command+strlen(COMMANDS[cmd_id]), NULL, 10);
@@ -712,6 +750,9 @@ int read_command() {
         case 13: // paste
             arg1 = strtol(command+strlen(COMMANDS[cmd_id]), &endptr, 10);
             arg3 = strtol(endptr, &endptr, 10);
+            printf("account to be pasted to position %d:\n", arg1);
+            print_table_header(global_view_mode);
+            print_account_as_table(get_account(arg3), global_view_mode);
             paste_account_at_number(arg1, get_account(arg3));
             break;
         default:
