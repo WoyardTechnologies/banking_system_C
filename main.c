@@ -21,8 +21,7 @@
 #define WELCOME_SCREEN_FILE "welcome_screen.txt"
 
 #define MAX_COMMAND_LENGTH 64
-#define N_OF_COMMANDS 14
-
+#define N_OF_COMMANDS 15
 const char* COMMANDS[] = {
         "list",
         "add",
@@ -37,7 +36,8 @@ const char* COMMANDS[] = {
         "reset_file",
         "collect_interest",
         "help",
-        "paste"
+        "paste",
+        "populate_file"
 };
 
 typedef struct Account{
@@ -673,6 +673,7 @@ int check_string_for_command(char* string, const char* command){
     return 0;
 }
 
+
 int read_command() {
     char command[MAX_COMMAND_LENGTH];
     int cmd_id;
@@ -738,7 +739,6 @@ int read_command() {
             return 1;
         case 10: // reset_file
             reset_file();
-            populate_file_with_preset_accounts();
             break;
         case 11: // collect_interest
             arg1 = strtol(command+strlen(COMMANDS[cmd_id]), NULL, 10);
@@ -755,6 +755,9 @@ int read_command() {
             print_account_as_table(get_account(arg3), global_view_mode);
             paste_account_at_number(arg1, get_account(arg3));
             break;
+        case 14: // populate_file
+            populate_file_with_preset_accounts();
+            break;
         default:
             printf("Command not recognized\n");
             break;
@@ -763,7 +766,6 @@ int read_command() {
 }
 
 int main() {
-    //reset_file();
     print_welcome_screen();
     verify_file_integrity();
     acc_t last_account = get_last_account();
