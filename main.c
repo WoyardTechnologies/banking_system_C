@@ -63,16 +63,16 @@ const acc_t NULL_ACCOUNT = {0, "", "", "", "", 0, 0, 0};
 const acc_t ROOT_BANK_ACCOUNT = {1, "Bank", "Bank", "ul. Bankowa 1 00-001 Warszawa", "00000000000", INT32_MAX/2, 0, 0};
 
 const acc_t PRESET_ACCOUNTS[] = {
-        1, "Jan", "Kowalski", "ul. Kowalska 1 00-001 Warszawa", "12345678901", 1000, 0, 0.1,
-        2, "Anna", "Nowak", "ul. Nowa 1 00-001 Warszawa", "12345678902", 2000, 0, 0.2,
-        3, "Piotr", "Kowalczyk", "ul. Kolczykowa 1 00-001 Warszawa", "12345678903", 3000, 0, 0.3,
-        4, "Agnieszka", "Kowalska", "ul. Kowalska 2 00-001 Warszawa", "12345678904", 4000, 0, 0.4,
-        5, "Janusz", "Nowak", "ul. Nowa 2 00-001 Warszawa", "12345678905", 5000, 0, 0.5,
-        6, "Krzysztof", "Kowalczyk", "ul. Kolczowa 2 00-001 Warszawa", "12345678906", 6000, 0, 0.6,
-        7, "Alicja", "Kowalska", "ul. Kowalska 3 00-001 Warszawa", "12345678907", 7000, 0, 0.7,
-        8, "Jan", "Nowak", "ul. Nowa 3 00-001 Warszawa", "12345678908", 8000, 0, 0.8,
-        9, "Anna", "Kowalczyk", "ul. Kowalkowa 3 00-001 Warszawa", "12345678909", 9000, 0, 0.9,
-        10, "Piotr", "Kowalski", "ul. Kowalska 4 00-001 Warszawa", "12345678910", 10000, 0, 0.1
+        {1, "Jan", "Kowalski", "ul. Kowalska 1 00-001 Warszawa", "12345678901", 1000, 0, 0.1,},
+        {2, "Anna", "Nowak", "ul. Nowa 1 00-001 Warszawa", "12345678902", 2000, 0, 0.2,},
+        {3, "Piotr", "Kowalczyk", "ul. Kolczykowa 1 00-001 Warszawa", "12345678903", 3000, 0, 0.3,},
+        {4, "Agnieszka", "Kowalska", "ul. Kowalska 2 00-001 Warszawa", "12345678904", 4000, 0, 0.4,},
+        {5, "Janusz", "Nowak", "ul. Nowa 2 00-001 Warszawa", "12345678905", 5000, 0, 0.5,},
+        {6, "Krzysztof", "Kowalczyk", "ul. Kolczowa 2 00-001 Warszawa", "12345678906", 6000, 0, 0.6,},
+        {7, "Alicja", "Kowalska", "ul. Kowalska 3 00-001 Warszawa", "12345678907", 7000, 0, 0.7,},
+        {8, "Jan", "Nowak", "ul. Nowa 3 00-001 Warszawa", "12345678908", 8000, 0, 0.8,},
+        {9, "Anna", "Kowalczyk", "ul. Kowalkowa 3 00-001 Warszawa", "12345678909", 9000, 0, 0.9,},
+        {10, "Piotr", "Kowalski", "ul. Kowalska 4 00-001 Warszawa", "12345678910", 10000, 0, 0.1},
 };
 
 bool REQUIRE_CONFIRMATION_ON_EDIT = true;
@@ -144,7 +144,7 @@ void print_table_header(int view_mode){
 }
 
 void print_account_as_table(acc_t account, int view_mode){
-    printf("| %0*.*u | %-*.*s | %-*.*s | %-*.*s | %-*.*s | %-*.d | %-*.d | %0.*f |\n",
+    printf("| %*.*u | %-*.*s | %-*.*s | %-*.*s | %-*.*s | %-*.d | %-*.d | %0.*f |\n",
            LENGTH_OF_ACCOUNT_NUMBER/view_mode, LENGTH_OF_ACCOUNT_NUMBER/view_mode, account.account_number,
            LENGTH_OF_NAME/view_mode, LENGTH_OF_NAME/view_mode, account.name,
            LENGTH_OF_SURNAME/view_mode, LENGTH_OF_SURNAME/view_mode, account.surname,
