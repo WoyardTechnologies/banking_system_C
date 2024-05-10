@@ -416,8 +416,8 @@ int add_account_from_input(){
     return 0;
 }
 
-int paste_account_at_number(uint32_t account_number, acc_t new_account) {
-    if(REQUIRE_CONFIRMATION_ON_EDIT && get_confirmation()==false){
+int paste_account_at_number(uint32_t account_number, acc_t new_account, bool preauthorized) {
+    if(!preauthorized && REQUIRE_CONFIRMATION_ON_EDIT && get_confirmation()==false){
         printf("Operation aborted\n");
         return 1;
     }
@@ -460,7 +460,7 @@ int make_deposit(uint32_t account_number, int32_t deposit_value){
         return 1;
     }
     account.curr_balance += deposit_value;
-    if (paste_account_at_number(account_number, account)==1)
+    if (paste_account_at_number(account_number, account, false)==1)
         return 1;
     else
         return 0;
@@ -485,7 +485,7 @@ int make_withdraw(uint32_t account_number, int32_t withdraw_value){
         return 1;
     }
     account.curr_balance -= withdraw_value;
-    if (paste_account_at_number(account_number, account)==1)
+    if (paste_account_at_number(account_number, account, false)==1)
         return 1;
     else
         return 0;
@@ -521,8 +521,12 @@ int take_loan(uint32_t account_number, int32_t loan_value){
     bank_account.curr_balance -= loan_value;
     account.loan_balance += loan_value;
     account.curr_balance += loan_value;
-    if (paste_account_at_number(account_number, account)==1 ||
-        paste_account_at_number(ROOT_BANK_ACCOUNT.account_number, bank_account)==1)
+    if (!get_confirmation()){
+        printf("Operation aborted\n");
+        return 1;
+    }
+    if (paste_account_at_number(account_number, account, true)==1 ||
+        paste_account_at_number(ROOT_BANK_ACCOUNT.account_number, bank_account, true)==1)
         return 1;
     else
         return 0;
@@ -558,8 +562,12 @@ int repay_loan(uint32_t account_number, int32_t payment_value){
     account.loan_balance -= payment_value;
     account.curr_balance -= payment_value;
     bank_account.curr_balance += payment_value;
-    if (paste_account_at_number(account_number, account)==1 ||
-        paste_account_at_number(ROOT_BANK_ACCOUNT.account_number, bank_account)==1)
+    if (!get_confirmation()){
+        printf("Operation aborted\n");
+        return 1;
+    }
+    if (paste_account_at_number(account_number, account, true)==1 ||
+        paste_account_at_number(ROOT_BANK_ACCOUNT.account_number, bank_account, false)==1)
         return 1;
     else
         return 0;
@@ -591,8 +599,12 @@ int make_transfer(uint32_t origin_account_number, uint32_t dest_account_number, 
     }
     origin_account.curr_balance -= transfer_value;
     dest_account.curr_balance += transfer_value;
-    if (paste_account_at_number(origin_account_number, origin_account) == 1 ||
-        paste_account_at_number(dest_account_number, dest_account) == 1){
+    if (!get_confirmation()){
+        printf("Operation aborted\n");
+        return 1;
+    }
+    if (paste_account_at_number(origin_account_number, origin_account, true) == 1 ||
+        paste_account_at_number(dest_account_number, dest_account, true) == 1){
         printf("Transfer failed\n");
         return 1;
     } else {
@@ -617,7 +629,7 @@ int collect_interest(uint32_t account_number){
     }
     account.loan_balance += interest_value;
     printf("Interest collected: %d\n", interest_value);
-    if (paste_account_at_number(account_number, account)==1)
+    if (paste_account_at_number(account_number, account, false)==1)
         return 1;
     else
         return 0;
@@ -802,7 +814,7 @@ int read_command() {
             printf("account to be pasted to position %d:\n", arg1);
             print_table_header(global_view_mode);
             print_account_as_table(get_account(arg3), global_view_mode);
-            paste_account_at_number(arg1, get_account(arg3));
+            paste_account_at_number(arg1, get_account(arg3), false);
             break;
         case 14:
             populate_file_with_preset_accounts();
