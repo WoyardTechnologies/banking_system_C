@@ -21,7 +21,7 @@
 #define WELCOME_SCREEN_FILE "welcome_screen.txt"
 
 #define MAX_COMMAND_LENGTH 64
-#define N_OF_COMMANDS 14
+#define N_OF_COMMANDS 15
 
 const char* COMMANDS[] = {
         "list",
@@ -37,7 +37,8 @@ const char* COMMANDS[] = {
         "reset_file",
         "collect_interest",
         "help",
-        "paste"
+        "paste",
+        "populate"
 };
 
 typedef struct Account{
@@ -98,15 +99,15 @@ void print_help(){
 
 void print_search_help(){
     printf("Search options:\n");
-    printf("0 - search by account number\n");
-    printf("1 - search by name\n");
-    printf("2 - search by surname\n");
-    printf("3 - search by address\n");
-    printf("4 - search by national ID\n");
+    printf("1 - search by account number\n");
+    printf("2 - search by name\n");
+    printf("3 - search by surname\n");
+    printf("4 - search by address\n");
+    printf("5 - search by national ID\n");
 }
 
 void print_welcome_screen() {
-    FILE *file = fopen(WELCOME_SCREEN_FILE, "r");
+    FILE *file = fopen(WELCOME_SCREEN_FILE, "rb");
     if (file == NULL) {
         printf("Error opening welcome file\n");
         return;
@@ -160,7 +161,7 @@ int read_all_records(int view_mode){
         printf("Invalid view mode\n");
         return 1;
     }
-    FILE *file = fopen(RECORD_FILE, "r");
+    FILE *file = fopen(RECORD_FILE, "rb");
     if (file == NULL){
         printf("Error opening file\n");
         return 1;
@@ -214,7 +215,7 @@ int reset_file() {
     printf("resetting file\n");
     if(get_confirmation() == false)
         return 1;
-    FILE *file = fopen(RECORD_FILE, "w");
+    FILE *file = fopen(RECORD_FILE, "wb");
     if (file == NULL) {
         printf("Error opening file\n");
         return 1;
@@ -227,7 +228,7 @@ int reset_file() {
 }
 
 int verify_file_integrity(){
-    FILE *file = fopen(RECORD_FILE, "r");
+    FILE *file = fopen(RECORD_FILE, "rb");
     if (file == NULL){
         printf("Error opening file\n");
         return 1;
@@ -251,24 +252,39 @@ acc_t get_account(uint32_t account_number){
         printf("Invalid account number\n");
         return NULL_ACCOUNT;
     }
-    FILE *file = fopen(RECORD_FILE, "r");
+    FILE *file = fopen(RECORD_FILE, "rb");
     if (file == NULL){
         printf("Error opening file\n");
         return NULL_ACCOUNT;
     }
+    acc_t buffer = NULL_ACCOUNT;
+    for(int i =0; i<=account_number; i++){
+        if(fread(&buffer, sizeof(acc_t), 1, file)==0){
+            printf("Error reading account\n");
+            fclose(file);
+            return NULL_ACCOUNT;
+        }
+    }
+    return buffer;
+
     if (fseek(file, account_number * sizeof(acc_t), SEEK_SET) != 0) {
         printf("Error finding account - id possibly out of range\n");
         fclose(file);
         return NULL_ACCOUNT;
     }
+
     acc_t account;
-    fread(&account, sizeof(acc_t), 1, file);
+    if(fread(&account, sizeof(acc_t), 1, file)!=1){
+        printf("Error reading account\n");
+        fclose(file);
+        return NULL_ACCOUNT;
+    }
     fclose(file);
     return account;
 }
 
 acc_t get_last_account(){
-    FILE *file = fopen(RECORD_FILE, "r");
+    FILE *file = fopen(RECORD_FILE, "rb");
     if (file == NULL){
         printf("Error opening file\n");
         return NULL_ACCOUNT;
@@ -287,16 +303,49 @@ acc_t get_last_account(){
     return last_account;
 }
 
+acc_t get_last_account_slow(){
+    FILE *file = fopen(RECORD_FILE, "rb");
+    if (file == NULL){
+        printf("Error opening file\n");
+        return NULL_ACCOUNT;
+    }
+    uint32_t n_of_found_accounts = 0;
+    acc_t account = NULL_ACCOUNT;
+    acc_t buffer = NULL_ACCOUNT;
+    if (fread(&buffer, sizeof(acc_t), 1, file)==0)
+        return NULL_ACCOUNT; // clearing null account at start of file
+    while (fread(&buffer, sizeof(acc_t), 1, file) != 0){
+        if (verify_account_validity(buffer)==1) {
+            break;
+        }
+        n_of_found_accounts++;
+        account = buffer;
+    }
+    fseek(file, n_of_found_accounts * sizeof(acc_t), SEEK_SET);
+    fread(&account, sizeof(acc_t), 1, file);
+    fclose(file);
+    return account;
+}
+
 int add_account(acc_t new_account) {
     acc_t last_account = get_last_account();
     new_account.account_number = last_account.account_number + 1;
-    FILE *file = fopen(RECORD_FILE, "a");
+    /*if (expand_file()==1){
+        printf("Error expanding record file\n");
+        return 1;
+    }*/
     if (verify_account_validity(new_account) != 0){
         printf("Error adding account - invalid data\n");
         return 1;
     }
+    FILE *file = fopen(RECORD_FILE, "ab");
     if (file == NULL) {
         printf("Error opening file\n");
+        return 1;
+    }
+    if (fseek(file, (new_account.account_number) * sizeof(acc_t), SEEK_SET) != 0) {
+        printf("Error adding account\n");
+        fclose(file);
         return 1;
     }
     fwrite(&new_account, sizeof(acc_t), 1, file);
@@ -376,7 +425,7 @@ int paste_account_at_number(uint32_t account_number, acc_t new_account) {
         printf("Error updating account - invalid data\n");
         return 1;
     }
-    FILE *file = fopen(RECORD_FILE, "r+");
+    FILE *file = fopen(RECORD_FILE, "rb+");
     if (file == NULL) {
         printf("Error opening file\n");
         return 1;
@@ -575,7 +624,7 @@ int collect_interest(uint32_t account_number){
 }
 
 int print_matching_accounts(acc_t pattern_acc, int view_mode){
-    FILE *file = fopen(RECORD_FILE, "r");
+    FILE *file = fopen(RECORD_FILE, "rb");
     if (file == NULL){
         printf("Error opening file\n");
         return 1;
@@ -612,7 +661,7 @@ int search_for_account(uint32_t search_option, char* prev_search_string){
         strncpy(search_string, prev_search_string, MAX_COMMAND_LENGTH);
     }
     switch (search_option) {
-        case 0:
+        case 1:
             if (no_same_line_arg_passed) {
                 printf("enter account number\n");
                 get_and_clean_input(search_string, MAX_COMMAND_LENGTH);
@@ -625,7 +674,7 @@ int search_for_account(uint32_t search_option, char* prev_search_string){
             print_table_header(global_view_mode);
             print_account_as_table(account, global_view_mode);
             return 0;
-        case 1:
+        case 2:
             if(no_same_line_arg_passed){
                 printf("enter name\n");
                 get_and_clean_input(account.name, LENGTH_OF_NAME);
@@ -633,7 +682,7 @@ int search_for_account(uint32_t search_option, char* prev_search_string){
                 strncpy(account.name, search_string, LENGTH_OF_NAME);
             }
             break;
-        case 2:
+        case 3:
             if(no_same_line_arg_passed){
                 printf("enter surname\n");
                 get_and_clean_input(account.surname, LENGTH_OF_SURNAME);
@@ -641,7 +690,7 @@ int search_for_account(uint32_t search_option, char* prev_search_string){
                 strncpy(account.surname, search_string, LENGTH_OF_SURNAME);
             }
             break;
-        case 3:
+        case 4:
             if(no_same_line_arg_passed){
                 printf("enter address\n");
                 get_and_clean_input(account.address, LENGTH_OF_ADDRESS);
@@ -649,7 +698,7 @@ int search_for_account(uint32_t search_option, char* prev_search_string){
                 strncpy(account.address, search_string, LENGTH_OF_ADDRESS);
             }
             break;
-        case 4:
+        case 5:
             if(no_same_line_arg_passed){
                 printf("enter national ID\n");
                 get_and_clean_input(account.national_id, LENGTH_OF_NATIONAL_ID);
@@ -755,6 +804,9 @@ int read_command() {
             print_account_as_table(get_account(arg3), global_view_mode);
             paste_account_at_number(arg1, get_account(arg3));
             break;
+        case 14:
+            populate_file_with_preset_accounts();
+            break;
         default:
             printf("Command not recognized\n");
             break;
@@ -769,6 +821,7 @@ int main() {
     acc_t last_account = get_last_account();
     number_of_accounts = last_account.account_number;
     REQUIRE_CONFIRMATION_ON_EDIT = true;
+    
     while(1) {
         if(read_command()==1){
             break;
