@@ -43,10 +43,10 @@ const char* COMMANDS[] = {
 
 typedef struct Account{
     uint32_t account_number; // specifications call for 'unlimited' number of accounts
-    char name[LENGTH_OF_NAME];           // but just 2^32 records will not fit on any even remotely reasonable storage (as of 2024)
-    char surname[LENGTH_OF_SURNAME];
-    char address[LENGTH_OF_ADDRESS];
-    char national_id[LENGTH_OF_NATIONAL_ID]; // PESEL
+    char name[LENGTH_OF_NAME+1];           // but just 2^32 records will not fit on any even remotely reasonable storage (as of 2024)
+    char surname[LENGTH_OF_SURNAME+1];
+    char address[LENGTH_OF_ADDRESS+1];
+    char national_id[LENGTH_OF_NATIONAL_ID+1]; // PESEL
     int32_t curr_balance;
     int32_t loan_balance;
     double interest_rate;
@@ -197,6 +197,10 @@ int verify_account_validity(acc_t account){
         return 3;
     if (account.interest_rate < 0 || account.interest_rate > 1)
         return 4;
+    for (int i = 0; i < LENGTH_OF_NATIONAL_ID; i++){
+        if (account.national_id[i] < '0' || account.national_id[i] > '9')
+            return 5;
+    }
     return 0;
 }
 
@@ -369,14 +373,18 @@ int get_and_clean_input(char* input_buffer, int buffer_size) {
         return 1;
     } else if (len >= buffer_size - 1) {
         int c;
-        while ((c = getchar()) != '\n' && c != EOF);
+        bool truncated = false;
+        while ((c = getchar()) != '\n' && c != EOF)
+            truncated = true;
+        if (truncated)
+            printf("Input too long, truncating\n");
     }
     convert_newlines_to_whitespace(input_buffer, len);
     return 0;
 }
 
 int add_account_from_input(){
-    acc_t new_account;
+    acc_t new_account = NULL_ACCOUNT;
     char temp_balance[LENGTH_OF_BALANCE], temp_loan_balance[LENGTH_OF_LOAN_BALANCE], temp_interest_rate[LENGTH_OF_INTEREST_RATE];
     printf("Enter name: ");
     get_and_clean_input(new_account.name, LENGTH_OF_NAME);
@@ -385,7 +393,7 @@ int add_account_from_input(){
     printf("Enter address: ");
     get_and_clean_input(new_account.address, LENGTH_OF_ADDRESS);
     printf("Enter national ID: ");
-    get_and_clean_input(new_account.national_id, LENGTH_OF_NATIONAL_ID);
+    get_and_clean_input(new_account.national_id, LENGTH_OF_NATIONAL_ID+1);
     printf("Enter current balance: ");
     get_and_clean_input(temp_balance, LENGTH_OF_BALANCE);
     new_account.curr_balance = strtol(temp_balance, NULL, 10);
