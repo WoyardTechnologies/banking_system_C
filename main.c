@@ -257,16 +257,6 @@ acc_t get_account(uint32_t account_number){
         printf("Error opening file\n");
         return NULL_ACCOUNT;
     }
-    acc_t buffer = NULL_ACCOUNT;
-    for(int i =0; i<=account_number; i++){
-        if(fread(&buffer, sizeof(acc_t), 1, file)==0){
-            printf("Error reading account\n");
-            fclose(file);
-            return NULL_ACCOUNT;
-        }
-    }
-    return buffer;
-
     if (fseek(file, account_number * sizeof(acc_t), SEEK_SET) != 0) {
         printf("Error finding account - id possibly out of range\n");
         fclose(file);
