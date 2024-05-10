@@ -324,10 +324,6 @@ acc_t get_last_account_slow(){
 int add_account(acc_t new_account) {
     acc_t last_account = get_last_account();
     new_account.account_number = last_account.account_number + 1;
-    /*if (expand_file()==1){
-        printf("Error expanding record file\n");
-        return 1;
-    }*/
     if (verify_account_validity(new_account) != 0){
         printf("Error adding account - invalid data\n");
         return 1;
@@ -384,7 +380,7 @@ int get_and_clean_input(char* input_buffer, int buffer_size) {
 }
 
 int add_account_from_input(){
-    acc_t new_account = NULL_ACCOUNT;
+    acc_t new_account = {0};
     char temp_balance[LENGTH_OF_BALANCE], temp_loan_balance[LENGTH_OF_LOAN_BALANCE], temp_interest_rate[LENGTH_OF_INTEREST_RATE];
     printf("Enter name: ");
     get_and_clean_input(new_account.name, LENGTH_OF_NAME);
